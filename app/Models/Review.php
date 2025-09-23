@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\ReviewReply;
+use App\Models\ReviewMedia;
 
 class Review extends Model
 {
@@ -33,5 +34,11 @@ class Review extends Model
     public function reply()
     {
         return $this->hasOne(ReviewReply::class);
+    }
+
+    // ✅ Một review có thể có nhiều media (ảnh/video)
+    public function media()
+    {
+        return $this->hasMany(ReviewMedia::class);
     }
 }

@@ -1056,20 +1056,37 @@
     @if(auth()->user()->hasPurchasedProduct($product->id))
         {{-- Review Form --}}
         <div class="review-form-card">
-            <form action="{{ route('products.reviews.store', $product->slug) }}" method="POST" class="review-form row">
+            <form action="{{ route('products.reviews.store', $product->slug) }}"
+      method="POST"
+      enctype="multipart/form-data"
+      class="review-form row">
     @csrf
+
     <div class="mb-3 col-md-3">
         <label class="form-label">Đánh giá của bạn</label>
-        <select name="rating" class="form-select">
+        <select name="rating" class="form-select" required>
             @for($i = 1; $i <= 5; $i++)
                 <option value="{{ $i }}">{{ $i }} sao</option>
             @endfor
         </select>
+        @error('rating') <div class="text-danger small">{{ $message }}</div> @enderror
     </div>
 
     <div class="mb-3 col-md-9">
         <label class="form-label">Bình luận</label>
-        <textarea name="comment" class="form-control" rows="3" placeholder="Chia sẻ cảm nhận của bạn về sản phẩm...">{{ old('comment') }}</textarea>
+        <textarea name="comment" class="form-control" rows="3"
+                  placeholder="Chia sẻ cảm nhận của bạn về sản phẩm...">{{ old('comment') }}</textarea>
+        @error('comment') <div class="text-danger small">{{ $message }}</div> @enderror
+    </div>
+
+    {{-- Upload media --}}
+    <div class="mb-3 col-12">
+        <label class="form-label">Ảnh/Video (tùy chọn, tối đa 5)</label>
+        <input type="file" name="media[]" id="reviewMediaInputNew" class="form-control"
+               multiple accept="image/*,video/*">
+        @error('media.*') <div class="text-danger small">{{ $message }}</div> @enderror
+        <div id="reviewMediaPreviewNew" class="d-flex flex-wrap gap-2 mt-2"></div>
+        <small class="text-muted">Hỗ trợ: jpg/png/webp/mp4. Kích thước tối đa mỗi file 20MB.</small>
     </div>
 
     <div class="col-12">
@@ -1126,6 +1143,27 @@
                 </div>
 
                 <p class="review-text">{{ $review->comment ?: 'Không có bình luận.' }}</p>
+                @if($review->media->count())
+    <div class="mt-2 d-flex flex-wrap gap-2">
+        @foreach($review->media as $m)
+            <div>
+                @if($m->file_type === 'image')
+                    <a href="{{ asset('storage/'.$m->file_path) }}" target="_blank">
+                        <img src="{{ asset('storage/'.$m->file_path) }}" alt="img" style="width:120px; height:auto;" class="img-thumbnail">
+                    </a>
+                @else
+                    <a href="{{ asset('storage/'.$m->file_path) }}" target="_blank">
+                        <video style="width:180px;" controls>
+                            <source src="{{ asset('storage/'.$m->file_path) }}">
+                            Trình duyệt không hỗ trợ video.
+                        </video>
+                    </a>
+                @endif
+            </div>
+        @endforeach
+    </div>
+@endif
+
                 <p class="review-date">{{ $review->created_at->format('d/m/Y H:i') }}</p>
 
                 @if($review->reply)
@@ -1140,34 +1178,67 @@
                 {{-- Edit Review Form --}}
                 @if(auth()->id() === $review->user_id)
                     <div class="collapse edit-review-form" id="editReview{{ $review->id }}">
-    <form action="{{ route('products.reviews.update', [$product->slug, $review->id]) }}" method="POST" class="row">
+    <form action="{{ route('products.reviews.update', [$product->slug, $review->id]) }}"
+          method="POST"
+          enctype="multipart/form-data"
+          class="row">
         @csrf
         @method('PUT')
 
         <div class="mb-3 col-md-3">
             <label class="form-label">Chỉnh sửa đánh giá</label>
-            <select name="rating" class="form-select">
+            <select name="rating" class="form-select" required>
                 @for($i = 1; $i <= 5; $i++)
                     <option value="{{ $i }}" {{ $review->rating == $i ? 'selected' : '' }}>{{ $i }} sao</option>
                 @endfor
             </select>
+            @error('rating') <div class="text-danger small">{{ $message }}</div> @enderror
         </div>
 
         <div class="mb-3 col-md-9">
             <label class="form-label">Chỉnh sửa bình luận</label>
             <textarea name="comment" class="form-control" rows="3">{{ old('comment', $review->comment) }}</textarea>
+            @error('comment') <div class="text-danger small">{{ $message }}</div> @enderror
         </div>
 
-        <div class="col-12 d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-                <i class="fas fa-check me-2"></i> Lưu thay đổi
-            </button>
-            <button type="button" class="btn btn-outline-secondary"
-                    data-bs-toggle="collapse"
-                    data-bs-target="#editReview{{ $review->id }}">
-                Hủy
-            </button>
+        {{-- Media hiện tại --}}
+        @if($review->media->isNotEmpty())
+        <div class="mb-3 col-12">
+            <label class="form-label">Ảnh/Video hiện tại</label>
+            <div class="d-flex flex-wrap gap-3">
+                @foreach($review->media as $m)
+                    <div class="position-relative review-media-item" style="width:150px;">
+                        @if($m->file_type === 'image')
+                            <img src="{{ asset('storage/'.$m->file_path) }}" class="img-thumbnail" style="width:100%; height:auto;">
+                        @else
+                            <video class="img-thumbnail" style="width:100%; height:auto;" controls>
+                                <source src="{{ asset('storage/'.$m->file_path) }}">
+                            </video>
+                        @endif
+
+                        <div class="form-check mt-1">
+                            <input class="form-check-input delete-media-checkbox" type="checkbox"
+                                   name="delete_media[]" value="{{ $m->id }}"
+                                   id="deleteMedia{{ $m->id }}">
+                            <label class="form-check-label small" for="deleteMedia{{ $m->id }}">Xóa</label>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
         </div>
+    @endif
+
+        {{-- Upload thêm --}}
+        <div class="mb-3 col-12">
+        <label class="form-label">Thêm ảnh/Video mới (tối đa 5 file)</label>
+        <input type="file" name="media[]" class="form-control" multiple>
+        <small class="text-muted">Hỗ trợ JPG, PNG, WebP, MP4 (tối đa 20MB mỗi file).</small>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Lưu thay đổi</button>
+        <a href="{{ url()->previous() }}" class="btn btn-secondary">Hủy</a>
+    </div>
     </form>
 </div>
 
@@ -1422,4 +1493,115 @@
 </script>
 @endpush
 
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const MAX_MEDIA = 5;
+
+    // Preview cho form gửi mới
+    const inputNew = document.getElementById('reviewMediaInputNew');
+    const previewNew = document.getElementById('reviewMediaPreviewNew');
+    if (inputNew) {
+        inputNew.addEventListener('change', function () {
+            previewNew.innerHTML = '';
+            const files = Array.from(this.files);
+            if (files.length > MAX_MEDIA) {
+                alert(`Tối đa ${MAX_MEDIA} file.`);
+                this.value = '';
+                return;
+            }
+            files.forEach(renderFilePreviewPreview);
+        });
+    }
+
+    // Preview + limit cho tất cả form edit (nhiều review trên 1 trang)
+    document.querySelectorAll('.review-media-input').forEach(function (input) {
+        const reviewId = input.dataset.reviewId;
+        const previewBox = document.getElementById('reviewMediaPreview' + reviewId);
+
+        // compute existing kept count = total existing media - checked delete
+        const container = input.closest('.collapse');
+        function getExistingKeptCount() {
+            const total = container ? container.querySelectorAll('.review-media-item').length : 0;
+            const checked = container ? container.querySelectorAll('.delete-media-checkbox:checked').length : 0;
+            return total - checked;
+        }
+
+        // when user toggles delete checkboxes, optionally warn if new files exceed limit
+        container && container.addEventListener('change', function (e) {
+            if (e.target.classList && e.target.classList.contains('delete-media-checkbox')) {
+                input.dispatchEvent(new Event('change')); // retrigger check
+            }
+        });
+
+        input.addEventListener('change', function () {
+            previewBox.innerHTML = '';
+            const newFiles = Array.from(this.files);
+            const kept = getExistingKeptCount();
+            if (kept + newFiles.length > MAX_MEDIA) {
+                alert(`Bạn đang giữ ${kept} file hiện tại — tổng (hiện tại + mới) không được vượt quá ${MAX_MEDIA}.`);
+                this.value = '';
+                return;
+            }
+            newFiles.forEach(renderFilePreviewPreview);
+        });
+    });
+
+    // helper to render preview
+    function renderFilePreviewPreview(file) {
+        const div = document.createElement('div');
+        div.style.width = '120px';
+        div.style.marginRight = '8px';
+
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.className = 'img-thumbnail';
+            img.style.width = '100%';
+            img.style.height = 'auto';
+            const reader = new FileReader();
+            reader.onload = function (e) { img.src = e.target.result; };
+            reader.readAsDataURL(file);
+            div.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.controls = true;
+            video.style.width = '100%';
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const src = document.createElement('source');
+                src.src = e.target.result;
+                video.appendChild(src);
+            };
+            reader.readAsDataURL(file);
+            div.appendChild(video);
+        } else {
+            const p = document.createElement('p');
+            p.textContent = file.name;
+            div.appendChild(p);
+        }
+        // append to appropriate preview container (find the nearest preview parent)
+        // If called from inputNew -> previewNew exists; else we assume previewBox is set earlier
+        if (typeof previewNew !== 'undefined' && previewNew && previewNew.contains(previewNew.firstChild)) {
+            // nothing, just append below
+        }
+        // We try to append to the last opened preview container available in scope:
+        // prefer currently focused preview (simple heuristics)
+        let appended = false;
+        // try to append to any preview container that is visible
+        const visiblePreviews = document.querySelectorAll('#reviewMediaPreviewNew, .review-media-preview');
+        for (const p of visiblePreviews) {
+            if (p && p.offsetParent !== null) { // visible
+                p.appendChild(div);
+                appended = true;
+                break;
+            }
+        }
+        if (!appended) {
+            // fallback: append to body
+            document.body.appendChild(div);
+        }
+    }
+});
+</script>
+@endpush
 

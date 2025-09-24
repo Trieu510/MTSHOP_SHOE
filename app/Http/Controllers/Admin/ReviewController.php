@@ -13,30 +13,38 @@ class ReviewController extends Controller
      * Hiển thị danh sách tất cả đánh giá.
      */
     public function index(Request $request)
-{
-    $query = Review::with(['user', 'product'])->orderBy('created_at', 'desc');
+    {
+        $query = Review::with(['user', 'product'])->orderBy('created_at', 'desc');
 
-    if ($request->filled('user')) {
-        $query->whereHas('user', function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->user . '%');
-        });
+        if ($request->filled('user')) {
+            $query->whereHas('user', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->user . '%');
+            });
+        }
+
+        if ($request->filled('product')) {
+            $query->whereHas('product', function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->product . '%');
+            });
+        }
+
+        if ($request->filled('rating')) {
+            $query->where('rating', $request->rating);
+        }
+
+        $reviews = $query->paginate(20)->withQueryString();
+
+        return view('admin.reviews.index', compact('reviews'));
     }
 
-    if ($request->filled('product')) {
-        $query->whereHas('product', function ($q) use ($request) {
-            $q->where('name', 'like', '%' . $request->product . '%');
-        });
+    /**
+     * Xem chi tiết một đánh giá.
+     */
+    public function show(Review $review)
+    {
+        $review->load(['user','product','media','reply']);
+        return view('admin.reviews.show', compact('review'));
     }
-
-    if ($request->filled('rating')) {
-        $query->where('rating', $request->rating);
-    }
-
-    $reviews = $query->paginate(20)->withQueryString();
-
-    return view('admin.reviews.index', compact('reviews'));
-}
-
 
     /**
      * Xóa một đánh giá.
@@ -48,26 +56,26 @@ class ReviewController extends Controller
                          ->with('success','Xóa đánh giá thành công.');
     }
 
-   public function reply(Request $request, Review $review)
-{
-    $request->validate([
-        'admin_reply' => 'required|string|max:1000',
-    ]);
+    /**
+     * Admin phản hồi đánh giá.
+     */
+    public function reply(Request $request, Review $review)
+    {
+        $request->validate([
+            'admin_reply' => 'required|string|max:1000',
+        ]);
 
-    // Check nếu đã phản hồi thì không cho phản hồi nữa
-    if ($review->reply) {
-        return redirect()->back()->with('error', 'Đánh giá này đã được phản hồi.');
+        if ($review->reply) {
+            return redirect()->back()->with('error', 'Đánh giá này đã được phản hồi.');
+        }
+
+        ReviewReply::create([
+            'review_id' => $review->id,
+            'admin_id'  => auth()->id(),
+            'content'   => $request->admin_reply,
+        ]);
+
+        return redirect()->route('admin.reviews.index')
+                         ->with('success', 'Phản hồi đánh giá thành công.');
     }
-
-    ReviewReply::create([
-        'review_id' => $review->id,
-        'admin_id' => auth()->id(), // hoặc User::admin()->id
-        'content' => $request->admin_reply,
-    ]);
-
-    return redirect()->route('admin.reviews.index')
-                     ->with('success', 'Phản hồi đánh giá thành công.');
-}
-
-
 }

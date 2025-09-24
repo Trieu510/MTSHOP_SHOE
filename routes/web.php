@@ -188,7 +188,7 @@ Route::middleware(['auth','is_admin'])
          // Route admin phí vận chuyển
          Route::resource('shipping_fees',AdminShippingFeeController::class)->except(['show']);
          Route::resource('reviews',    AdminReviewController::class)
-              ->only(['index','destroy']);
+              ->only(['index','show','destroy']);
 
         Route::post('reviews/{review}/reply', [AdminReviewController::class, 'reply'])->name('reviews.reply');
 

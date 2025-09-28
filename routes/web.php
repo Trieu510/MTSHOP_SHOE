@@ -36,6 +36,8 @@ use App\Http\Controllers\Front\OrderController         as FrontOrderController;
 use App\Http\Controllers\Front\ContactController       as FrontContactController;
 use App\Http\Controllers\Front\AddressController       as FrontAddressController;
 use App\Http\Controllers\Front\ProfileController       as FrontProfileController;
+use App\Http\Controllers\Front\SpinController;
+
 
 use App\Http\Controllers\Api\ShippingFeeApiController;
 use App\Http\Controllers\Auth\LoginController;
@@ -138,8 +140,11 @@ Route::middleware('auth')->group(function(){
          ->names('addresses')     // addresses.index, addresses.create...
          ->except(['show']);
 
+    //vòng quay may mắn
+    Route::get('/spin', [SpinController::class, 'index'])->name('spin.index');
+    Route::post('/spin/play', [SpinController::class, 'spin'])->name('spin.play');
 
-     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
 
     // Profile (Front)

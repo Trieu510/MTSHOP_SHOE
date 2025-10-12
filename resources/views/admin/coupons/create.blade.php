@@ -227,6 +227,24 @@
                     <label class="form-check-label" for="is_active">Kích hoạt mã</label>
                 </div>
 
+                {{-- Vòng quay may mắn --}}
+<div class="form-check form-switch mb-3 form-group">
+    {{-- Hidden input để luôn gửi giá trị, tránh trường hợp không tick thì không có field --}}
+    <input type="hidden" name="is_spin_prize" value="0">
+    <input type="checkbox" name="is_spin_prize" id="is_spin_prize" value="1"
+           class="form-check-input" {{ old('is_spin_prize') ? 'checked' : '' }}>
+    <label class="form-check-label fw-bold" for="is_spin_prize">Dùng cho vòng quay may mắn</label>
+</div>
+
+<div class="mb-3 form-group">
+    <label for="chance" class="form-label">Xác suất xuất hiện trong vòng quay (%)</label>
+    <input type="number" name="chance" id="chance"
+           class="form-control @error('chance') is-invalid @enderror"
+           value="{{ old('chance', 0) }}" min="0" max="100" required>
+    @error('chance') <div class="invalid-feedback">{{ $message }}</div> @enderror
+</div>
+
+
                 <button type="submit" class="btn btn-primary">
                     <i class="bi bi-check-circle me-2"></i>Lưu mã giảm giá
                 </button>

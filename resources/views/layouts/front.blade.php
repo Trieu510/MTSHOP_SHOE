@@ -633,6 +633,28 @@
       }
 
     }
+
+  .spin-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
+        box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+        transition: all 0.3s ease;
+    }
+
+    /* Khi rê chuột thì icon rung */
+    .spin-btn:hover {
+        animation: shake 0.5s ease-in-out infinite;
+    }
+
+    @keyframes shake {
+        0% { transform: rotate(0deg); }
+        25% { transform: rotate(5deg); }
+        50% { transform: rotate(-5deg); }
+        75% { transform: rotate(5deg); }
+        100% { transform: rotate(0deg); }
+    }
+
   </style>
 
   @stack('styles')
@@ -801,6 +823,13 @@
       </div>
     </div>
   </nav>
+
+  <!-- Nút Luxury Spin -->
+<div class="position-fixed bottom-0 end-0 m-3">
+    <a href="{{ route('spin.index') }}" class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center spin-btn">
+        🎡
+    </a>
+</div>
 
   <!-- Main Content -->
   <main class="flex-grow-1">

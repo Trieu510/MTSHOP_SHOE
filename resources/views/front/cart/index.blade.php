@@ -539,55 +539,73 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($cart as $rowId => $item)
-                    <tr>
-                        <td>
-                            <div class="product-info">
-                                <div class="product-image">
-                                    @if($item['image'])
-                                    <img src="{{ asset('storage/'.$item['image']) }}" alt="{{ $item['name'] }}">
-                                    @else
-                                    <i class="bi bi-image" style="font-size: 1.5rem; color: #cbd5e1;"></i>
-                                    @endif
-                                </div>
-                                <div>
-                                    <div class="product-name">{{ $item['name'] }}</div>
-                                    <div class="product-variant">Size: {{ $item['variant'] }}</div>
-                                </div>
-                            </div>
-                        </td>
-                        <td class="product-price">
-                            @if(isset($item['is_flash_sale']) && $item['is_flash_sale'])
-                                <span style="color: #dc2626; font-weight: bold;">
-                                    {{ number_format($item['price'], 0, ',', '.') }} ₫
-                                </span>
-                                <del class="text-muted ms-2">
-                                    {{ number_format($item['original_price'], 0, ',', '.') }} ₫
-                                </del>
-                            @else
-                                {{ number_format($item['price'], 0, ',', '.') }} ₫
-                            @endif
-                        </td>
-                        <td>
-                            <form action="{{ route('cart.update', $rowId) }}" method="POST" class="quantity-control">
-                                @csrf @method('PATCH')
-                                <button type="button" class="quantity-btn minus">-</button>
-                                <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" class="quantity-input">
-                                <button type="button" class="quantity-btn plus">+</button>
-                            </form>
-                        </td>
-                        <td class="product-price">{{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }} ₫</td>
-                        <td>
-                            <form action="{{ route('cart.destroy', $rowId) }}" method="POST">
-                                @csrf @method('DELETE')
-                                <button type="submit" class="remove-btn" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
+    @foreach($cart as $rowId => $item)
+    <tr>
+        <td>
+            <div class="product-info">
+                <div class="product-image">
+                    @if(!empty($item['image']))
+                        <img src="{{ asset('storage/'.$item['image']) }}" alt="{{ $item['name'] }}">
+                    @else
+                        <i class="bi bi-image" style="font-size: 1.5rem; color: #cbd5e1;"></i>
+                    @endif
+                </div>
+                <div>
+                    <div class="product-name">{{ $item['name'] }}</div>
+
+                    {{-- Hiển thị Size đúng thay vì JSON --}}
+                    <div class="product-variant">
+                        Size:
+                        @if(is_array($item['variant']))
+                            {{ $item['variant']['size'] ?? '' }}
+                        @elseif(is_object($item['variant']))
+                            {{ $item['variant']->size ?? '' }}
+                        @else
+                            {{ $item['variant'] ?? '' }}
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </td>
+
+        <td class="product-price">
+            @if(isset($item['is_flash_sale']) && $item['is_flash_sale'])
+                <span style="color: #dc2626; font-weight: bold;">
+                    {{ number_format($item['price'], 0, ',', '.') }} ₫
+                </span>
+                <del class="text-muted ms-2">
+                    {{ number_format($item['original_price'], 0, ',', '.') }} ₫
+                </del>
+            @else
+                {{ number_format($item['price'], 0, ',', '.') }} ₫
+            @endif
+        </td>
+
+        <td>
+            <form action="{{ route('cart.update', $rowId) }}" method="POST" class="quantity-control">
+                @csrf @method('PATCH')
+                <button type="button" class="quantity-btn minus">-</button>
+                <input type="number" name="quantity" value="{{ $item['quantity'] }}" min="1" class="quantity-input">
+                <button type="button" class="quantity-btn plus">+</button>
+            </form>
+        </td>
+
+        <td class="product-price">
+            {{ number_format($item['price'] * $item['quantity'], 0, ',', '.') }} ₫
+        </td>
+
+        <td>
+            <form action="{{ route('cart.destroy', $rowId) }}" method="POST">
+                @csrf @method('DELETE')
+                <button type="submit" class="remove-btn" onclick="return confirm('Bạn có chắc muốn xóa sản phẩm này khỏi giỏ hàng?')">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </form>
+        </td>
+    </tr>
+    @endforeach
+</tbody>
+
             </table>
         </div>
 
@@ -649,6 +667,27 @@
                         </div>
                     </div>
                     @endif
+                    {{-- Coupon quay trúng từ vòng quay may mắn --}}
+@if(!empty($wonCoupons))
+    <div class="mt-4 p-4 rounded shadow-sm" style="background: linear-gradient(135deg, #ffefba, #ffffff); border: 2px dashed #ff9800;">
+        <h5 class="fw-bold text-danger mb-3">
+            🎉 Chúc mừng! Bạn đã quay trúng mã giảm giá
+        </h5>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach($wonCoupons as $code)
+                <div class="coupon-box d-flex align-items-center justify-content-between px-3 py-2 rounded"
+                     style="background: #fff8e1; border: 1px solid #ffb74d; min-width: 180px;">
+                    <span class="coupon-code fw-bold text-dark me-2">{{ $code }}</span>
+                    <button class="btn btn-sm btn-outline-danger copy-btn"
+                            data-code="{{ $code }}">
+                        📋 Sao chép
+                    </button>
+                </div>
+            @endforeach
+        </div>
+    </div>
+@endif
+
 
                     <form action="{{ route('coupon.apply') }}" method="POST" class="mb-3">
                         @csrf
@@ -657,11 +696,22 @@
                             <button class="btn btn-primary" type="submit" style="background: linear-gradient(90deg, var(--primary-color), var(--accent-color)); border: none;">Áp dụng</button>
                         </div>
                         @if(session('coupon'))
-                            <small class="text-success d-block mt-2">
-                                Đã áp dụng mã: <strong>{{ session('coupon.code') }}</strong>
-                                <a href="{{ route('coupon.remove') }}" class="text-danger ms-2">[Xoá mã]</a>
-                            </small>
-                        @endif
+    <div class="mt-2">
+        <small class="text-success">
+            Đã áp dụng mã: <strong>{{ session('coupon.code') }}</strong>
+        </small>
+
+        <form action="{{ route('coupon.remove') }}" method="POST" style="display:inline;">
+            @csrf
+            <input type="hidden" name="code" value="{{ session('coupon.code') }}">
+            <button type="submit" class="btn btn-link text-danger p-0 m-0 align-baseline">
+                [Xoá mã]
+            </button>
+        </form>
+    </div>
+@endif
+
+
                         @if(session('coupon_error'))
                             <small class="text-danger d-block mt-2">{{ session('coupon_error') }}</small>
                         @endif
@@ -756,5 +806,19 @@
         });
     });
 </script>
+
+{{-- JS copy to clipboard --}}
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.copy-btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    let code = this.getAttribute('data-code');
+                    navigator.clipboard.writeText(code).then(() => {
+                        alert("✅ Đã sao chép mã: " + code);
+                    });
+                });
+            });
+        });
+    </script>
 @endpush
 @endsection

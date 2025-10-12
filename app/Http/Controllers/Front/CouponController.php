@@ -63,9 +63,23 @@ class CouponController extends Controller
         return back()->with('success', 'Áp dụng mã giảm giá thành công.');
     }
 
-    public function remove()
-    {
+    public function remove(Request $request)
+{
+    $code = $request->input('code'); // nhận mã muốn xóa
+
+    // Nếu đang áp dụng coupon chính
+    if (session()->has('coupon') && session('coupon.code') === $code) {
         session()->forget('coupon');
-        return back()->with('success', 'Đã xóa mã giảm giá.');
     }
+
+    // Nếu mã nằm trong danh sách mã quay trúng
+    $wonCoupons = session('won_coupons', []);
+    if (in_array($code, $wonCoupons)) {
+        $wonCoupons = array_filter($wonCoupons, fn($c) => $c !== $code);
+        session(['won_coupons' => $wonCoupons]);
+    }
+
+    return redirect()->route('cart.index')->with('success', "Đã xóa mã $code.");
+}
+
 }

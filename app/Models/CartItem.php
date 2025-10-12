@@ -5,20 +5,18 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class SpinLog extends Model
+class CartItem extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'coupon_id',
-        'prize',
-        'ip_address',   // lưu IP chống spam
-        'user_agent',   // lưu thông tin trình duyệt
+        'product_variant_id',
+        'quantity',
     ];
 
     /**
-     * Quan hệ với User
+     * CartItem thuộc về User
      */
     public function user()
     {
@@ -26,10 +24,10 @@ class SpinLog extends Model
     }
 
     /**
-     * Quan hệ với Coupon
+     * CartItem thuộc về ProductVariant
      */
-    public function coupon()
+    public function variant()
     {
-        return $this->belongsTo(Coupon::class);
+        return $this->belongsTo(ProductVariant::class, 'product_variant_id');
     }
 }

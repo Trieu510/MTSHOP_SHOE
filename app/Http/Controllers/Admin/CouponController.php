@@ -37,6 +37,8 @@ class CouponController extends Controller
             'scope'            => 'required|in:all,category,product',
             'category_id'      => 'nullable|exists:categories,id',
             'product_id'       => 'nullable|exists:products,id',
+            'is_spin_prize'    => 'nullable|boolean',
+            'chance'           => 'nullable|integer|min:0|max:100',
         ]);
 
         if ($request->filled('expires_at')) {
@@ -47,8 +49,10 @@ class CouponController extends Controller
             }
         }
 
-        $validated['is_active'] = $request->has('is_active');
-        $validated['used'] = 0;
+        $validated['is_active']    = $request->has('is_active');
+        $validated['is_spin_prize'] = $request->has('is_spin_prize');
+        $validated['chance']       = $request->input('chance', 0);
+        $validated['used']         = 0;
 
         Coupon::create($validated);
 
@@ -75,6 +79,8 @@ class CouponController extends Controller
             'scope'            => 'required|in:all,category,product',
             'category_id'      => 'nullable|exists:categories,id',
             'product_id'       => 'nullable|exists:products,id',
+            'is_spin_prize'    => 'nullable|boolean',
+            'chance'           => 'nullable|integer|min:0|max:100',
         ]);
 
         if ($request->filled('expires_at')) {
@@ -85,7 +91,9 @@ class CouponController extends Controller
             }
         }
 
-        $validated['is_active'] = $request->has('is_active');
+        $validated['is_active']     = $request->has('is_active');
+        $validated['is_spin_prize'] = $request->has('is_spin_prize');
+        $validated['chance']        = $request->input('chance', 0);
 
         $coupon->update($validated);
 

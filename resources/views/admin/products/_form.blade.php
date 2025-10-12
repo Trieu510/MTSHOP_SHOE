@@ -172,7 +172,7 @@
 </div>
 
 <hr class="my-4">
-<h5 class="mb-4 fw-bold text-dark">Biến thể (Size & Kho)</h5>
+<h5 class="mb-4 fw-bold text-dark">Size</h5>
 <div id="variants-wrapper" class="p-3 rounded-3 bg-gradient-light">
     @php
         $oldSizes = old('sizes', isset($product) ? $product->variants->pluck('size')->toArray() : []);
@@ -200,7 +200,7 @@
 
 </div>
 <button type="button" class="btn btn-outline-primary btn-sm mb-4 btn-add-variant" id="add-variant">
-    <i class="bi bi-plus-circle me-1"></i> Thêm biến thể
+    <i class="bi bi-plus-circle me-1"></i> Thêm Size
 </button>
 
 <hr class="my-4">

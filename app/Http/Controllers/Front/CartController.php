@@ -11,37 +11,39 @@ use Carbon\Carbon;
 class CartController extends Controller
 {
     // Hiển thị giỏ hàng
-    // Hiển thị giỏ hàng
-public function index()
-{
-    $cart = session('cart', []);
+    public function index()
+    {
+        $cart = session('cart', []);
 
-    foreach ($cart as $key => $item) {
-        $product = \App\Models\Product::find($item['product_id']);
-        if ($product) {
-            $cart[$key]['price']          = $product->flash_sale_price ?? $product->price;
-            $cart[$key]['original_price'] = $product->price;
-            $cart[$key]['is_flash_sale']  = $product->has_flash_sale;
+        foreach ($cart as $key => $item) {
+            $product = \App\Models\Product::find($item['product_id']);
+            if ($product) {
+                $cart[$key]['price']          = $product->flash_sale_price ?? $product->price;
+                $cart[$key]['original_price'] = $product->price;
+                $cart[$key]['is_flash_sale']  = $product->has_flash_sale;
+            }
         }
+
+        // Cập nhật lại session để đảm bảo giá mới nhất
+        session(['cart' => $cart]);
+
+        // Tính tổng giá trị giỏ hàng
+        $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
+
+        // ✅ Lấy tất cả coupon thường (admin tạo, KHÔNG phải cho vòng quay)
+        $activeCoupons = Coupon::where('is_active', 1)
+            ->where('is_spin_prize', 0) // chỉ lấy coupon thường
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                      ->orWhere('expires_at', '>', Carbon::now());
+            })
+            ->get();
+
+        // ✅ Lấy coupon người dùng đã quay trúng (từ session)
+        $wonCoupons = session('won_coupons', []); // mảng code
+
+        return view('front.cart.index', compact('cart', 'total', 'activeCoupons', 'wonCoupons'));
     }
-
-    // Cập nhật lại session để đảm bảo giá mới nhất
-    session(['cart' => $cart]);
-
-    // Tính tổng giá trị giỏ hàng
-    $total = collect($cart)->sum(fn($item) => $item['price'] * $item['quantity']);
-
-    // ✅ Lấy tất cả coupon admin đã tạo còn hiệu lực
-    $activeCoupons = Coupon::where('is_active', 1)
-        ->where(function ($query) {
-            $query->whereNull('expires_at')
-                  ->orWhere('expires_at', '>', Carbon::now());
-        })
-        ->get();
-
-    return view('front.cart.index', compact('cart', 'total', 'activeCoupons'));
-}
-
 
     // Thêm vào giỏ
     public function store(Request $request)

@@ -22,11 +22,17 @@ class Coupon extends Model
         'scope',
         'category_id',
         'product_id',
+
+        // 🔥 Dùng cho vòng quay
+        'is_spin_prize',
+        'chance',
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'is_active' => 'boolean',
+        'is_spin_prize' => 'boolean',
+        'chance' => 'integer',
     ];
 
     // ⚙️ Quan hệ với category và product

@@ -11,6 +11,7 @@ use App\Models\Contact;
 use App\Models\Review;
 use App\Models\Wishlist; // ← import Wishlist
 use App\Models\Address;
+use App\Models\CartItem;
 
 
 class User extends Authenticatable
@@ -64,6 +65,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Quan hệ: user có nhiều cart items
+     */
+    public function cartItems()
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    /**
  * Kiểm tra xem người dùng đã mua sản phẩm (và đơn hàng ở trạng thái completed)
  */
 public function hasPurchasedProduct($productId)
@@ -109,6 +118,27 @@ public function hasPurchasedProduct($productId)
     public function defaultAddress()
     {
     return $this->hasOne(Address::class)->where('is_default', 1);
+    }
+
+    public function sentMessages()
+    {
+        return $this->hasMany(Message::class, 'user_id');
+    }
+
+    /**
+     * Quan hệ: user có nhiều tin nhắn đã nhận
+     */
+    public function receivedMessages()
+    {
+        return $this->hasMany(Message::class, 'receiver_id');
+    }
+
+    /**
+     * Alias cho messages() — để tương thích với controller admin
+     */
+    public function messages()
+    {
+        return $this->hasMany(Message::class, 'user_id');
     }
 
 }

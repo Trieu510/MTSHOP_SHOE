@@ -16,7 +16,7 @@ use App\Http\Controllers\Admin\ReviewController        as AdminReviewController;
 use App\Http\Controllers\Admin\ContactController       as AdminContactController;
 use App\Http\Controllers\Admin\ShippingFeeController   as AdminShippingFeeController;
 use App\Http\Controllers\Admin\PostController as AdminPostController;
-
+use App\Http\Controllers\Admin\ChatAdminController;
 
 // Front controllers
 use App\Http\Controllers\Front\HomeController;
@@ -37,6 +37,7 @@ use App\Http\Controllers\Front\ContactController       as FrontContactController
 use App\Http\Controllers\Front\AddressController       as FrontAddressController;
 use App\Http\Controllers\Front\ProfileController       as FrontProfileController;
 use App\Http\Controllers\Front\SpinController;
+use App\Http\Controllers\Front\ChatController;
 
 
 use App\Http\Controllers\Api\ShippingFeeApiController;
@@ -126,7 +127,7 @@ Route::middleware('auth')->group(function(){
 
 
     Route::post('/coupon/apply', [FrontCouponController::class, 'apply'])->name('coupon.apply');
-    Route::get('/coupon/remove', [FrontCouponController::class, 'remove'])->name('coupon.remove');
+    Route::post('/coupon/remove', [FrontCouponController::class, 'remove'])->name('coupon.remove');
 
 
     // My Contacts
@@ -139,6 +140,10 @@ Route::middleware('auth')->group(function(){
     Route::resource('profile/addresses', FrontAddressController::class)
          ->names('addresses')     // addresses.index, addresses.create...
          ->except(['show']);
+
+    //chat
+    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
 
     //vòng quay may mắn
     Route::get('/spin', [SpinController::class, 'index'])->name('spin.index');
@@ -207,6 +212,10 @@ Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('inven
 Route::get('/inventory/{id}/logs', [InventoryController::class, 'logsByVariant'])->name('inventory.logs.by_variant');
 Route::get('/inventory/logs/export', [InventoryController::class, 'exportLogs'])->name('inventory.logs.export');
 
+//admin chat
+Route::get('/chats', [ChatAdminController::class, 'index'])->name('chat.index');
+Route::get('/chats/{userId}', [ChatAdminController::class, 'show'])->name('chat.show');
+Route::post('/chats/{userId}/send', [ChatAdminController::class, 'send'])->name('chat.send');
 
 
         Route::resource('returns',AdminReturnRequestController::class)->except(['show']);

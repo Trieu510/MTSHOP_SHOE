@@ -824,10 +824,28 @@
     </div>
   </nav>
 
-  <!-- Nút Luxury Spin -->
-<div class="position-fixed bottom-0 end-0 m-3">
-    <a href="{{ route('spin.index') }}" class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center spin-btn">
+  <!-- 💬 Nút Chat + Vòng quay -->
+<div class="position-fixed d-flex align-items-center gap-3"
+     style="bottom: 30px; right: 25px; z-index: 1050;">
+
+    <!-- Nút Vòng quay -->
+    <a href="{{ route('spin.index') }}"
+       class="btn btn-danger rounded-circle d-flex align-items-center justify-content-center shadow-lg"
+       title="Vòng quay may mắn"
+       style="width: 60px; height: 60px; font-size: 26px;">
         🎡
+    </a>
+
+    <!-- Nút Chat -->
+    <a href="{{ route('chat.index') }}"
+       class="btn btn-primary rounded-circle d-flex align-items-center justify-content-center shadow-lg position-relative"
+       title="Chat với hỗ trợ"
+       style="width: 60px; height: 60px; font-size: 26px; overflow: visible;">
+        💬
+        <span id="message-count"
+              class="position-absolute top-0 start-100 translate-middle bg-danger"
+              style="width: 12px; height: 12px; border-radius: 50%; display: none;">
+        </span>
     </a>
 </div>
 
@@ -1036,7 +1054,50 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const badge = document.getElementById("message-count");
+  if (!badge) return;
 
-  @stack('scripts')
+  // ✅ Kiểm tra xem đang ở trang /chat hay không
+  const isChatPage = window.location.pathname.includes("/chat");
+
+  // 🔁 Hàm kiểm tra tin chưa đọc
+  function checkUnreadMessages() {
+    fetch("{{ route('chat.unread') }}")
+      .then(res => res.json())
+      .then(data => {
+        // Nếu đang ở trang chat → ẩn chấm đỏ & reset luôn
+        if (isChatPage) {
+          badge.style.display = "none";
+          badge.textContent = "";
+          return;
+        }
+
+        // Nếu ở trang khác → cập nhật bình thường
+        if (data.count > 0) {
+          badge.style.display = "inline-block";
+          badge.textContent = "";
+        } else {
+          badge.style.display = "none";
+        }
+      })
+      .catch(err => console.error("Lỗi lấy tin nhắn:", err));
+  }
+
+  // ✅ Gọi khi tải trang
+  checkUnreadMessages();
+
+  // 🔁 Chỉ kiểm tra định kỳ nếu KHÔNG ở trang chat
+  if (!isChatPage) {
+    setInterval(checkUnreadMessages, 10000);
+  } else {
+    // Khi đang ở /chat, ẩn luôn
+    badge.style.display = "none";
+  }
+});
+</script>
+
+@stack('scripts')
 </body>
 </html>

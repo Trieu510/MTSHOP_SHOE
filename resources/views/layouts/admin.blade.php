@@ -474,6 +474,16 @@
                         @php
                             $unreadNotifications = auth()->user()->unreadNotifications ?? collect();
                         @endphp
+                        <!-- 🔹 Icon Chat riêng cho Admin -->
+<li class="nav-item me-3">
+    <a href="{{ route('admin.chat.index') }}" class="nav-link position-relative" title="Tin nhắn hỗ trợ">
+        <i class="bi bi-chat-dots fs-5"></i>
+        <span id="admin-chat-badge"
+              class="position-absolute top-0 start-100 translate-middle bg-danger rounded-circle"
+              style="width: 10px; height: 10px; display: none;">
+        </span>
+    </a>
+</li>
 
                         <li class="nav-item dropdown me-3">
                             <a class="nav-link position-relative" href="#" data-bs-toggle="dropdown" aria-expanded="false">
@@ -784,6 +794,50 @@
             }
         });
     </script>
+<!-- 🔹 Kiểm tra tin nhắn chưa đọc và hiển thị chấm đỏ -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const badge = document.getElementById("admin-chat-badge");
+    if (!badge) return;
+
+    const isChatPage = window.location.pathname.includes("/admin/chats");
+
+    function checkUnreadMessages() {
+        fetch("{{ route('chat.unread') }}")
+            .then(res => res.json())
+            .then(data => {
+                if (isChatPage) {
+                    badge.style.display = "none";
+                    return;
+                }
+                if (data.count > 0) {
+                    badge.style.display = "inline-block";
+                } else {
+                    badge.style.display = "none";
+                }
+            })
+            .catch(err => console.error("Lỗi khi kiểm tra tin nhắn:", err));
+    }
+
+    // Gọi khi load trang
+    checkUnreadMessages();
+
+    // Gọi lại mỗi 7 giây
+    setInterval(checkUnreadMessages, 7000);
+});
+</script>
+
+<!-- 🔹 Hiệu ứng rung cho chấm đỏ -->
+<style>
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+#admin-chat-badge {
+    animation: pulse 1.6s infinite;
+}
+</style>
 
     @stack('scripts')
 </body>

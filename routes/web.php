@@ -141,9 +141,24 @@ Route::middleware('auth')->group(function(){
          ->names('addresses')     // addresses.index, addresses.create...
          ->except(['show']);
 
-    //chat
-    Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
-    Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
+    // ========================== 💬 CHAT (Frontend) ==========================
+
+// 💬 Trang trò chuyện + gửi tin
+Route::get('/chat', [ChatController::class, 'index'])->name('chat.index');
+Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
+
+// 🔔 Lấy số lượng tin nhắn chưa đọc (hiển thị chấm đỏ icon chat)
+Route::get('/chat/unread-count', [ChatController::class, 'getUnreadCount'])->name('chat.unread');
+
+// 🆕 Kiểm tra tin nhắn mới từ admin (polling AJAX)
+Route::get('/chat/check-new', [ChatController::class, 'checkNewMessages'])->name('chat.checkNew');
+
+// 🗑 Xóa tin nhắn phía mình (ẩn một chiều)
+Route::delete('/chat/messages/{id}/delete-self', [ChatController::class, 'deleteSelf'])->name('chat.deleteSelf');
+
+// 🔁 Thu hồi tin nhắn (xóa cho cả 2 bên)
+Route::post('/chat/messages/{id}/recall', [ChatController::class, 'recall'])->name('chat.recall');
+
 
     //vòng quay may mắn
     Route::get('/spin', [SpinController::class, 'index'])->name('spin.index');
@@ -212,10 +227,29 @@ Route::get('/inventory/logs', [InventoryController::class, 'logs'])->name('inven
 Route::get('/inventory/{id}/logs', [InventoryController::class, 'logsByVariant'])->name('inventory.logs.by_variant');
 Route::get('/inventory/logs/export', [InventoryController::class, 'exportLogs'])->name('inventory.logs.export');
 
-//admin chat
-Route::get('/chats', [ChatAdminController::class, 'index'])->name('chat.index');
-Route::get('/chats/{userId}', [ChatAdminController::class, 'show'])->name('chat.show');
-Route::post('/chats/{userId}/send', [ChatAdminController::class, 'send'])->name('chat.send');
+// 📌 Danh sách khách hàng có chat
+Route::get('/chats', [ChatAdminController::class, 'index'])
+    ->name('chat.index');
+
+// 💬 Trang chat với khách hàng cụ thể
+Route::get('/chats/{userId}', [ChatAdminController::class, 'show'])
+    ->name('chat.show');
+
+// ✉️ Gửi tin nhắn (có hỗ trợ trả lời)
+Route::post('/chats/{userId}/send', [ChatAdminController::class, 'send'])
+    ->name('chat.send');
+
+// 🗑 Xóa tin nhắn một phía (Admin)
+Route::delete('/chats/messages/{id}/delete-self', [ChatAdminController::class, 'deleteSelf'])
+    ->name('chat.deleteSelf');
+
+// 🔁 Thu hồi tin nhắn (Admin)
+Route::post('/chats/messages/{id}/recall', [ChatAdminController::class, 'recall'])
+    ->name('chat.recall');
+
+// 🔔 Đếm số lượng tin nhắn chưa đọc (hiển thị chấm đỏ icon chat)
+Route::get('/chats/unread-count', [ChatAdminController::class, 'getUnreadCount'])
+    ->name('chat.unread');
 
 
         Route::resource('returns',AdminReturnRequestController::class)->except(['show']);

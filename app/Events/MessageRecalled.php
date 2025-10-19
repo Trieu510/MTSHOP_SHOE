@@ -8,30 +8,26 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcastNow
+class MessageRecalled implements ShouldBroadcastNow
 {
     use Dispatchable, SerializesModels;
 
     public $id;
     public $sender_id;
     public $receiver_id;
-    public $content;
-    public $created_at;
 
     /**
-     * Tạo event khi gửi tin nhắn
+     * Tạo event khi thu hồi tin nhắn
      */
     public function __construct(Message $message)
     {
         $this->id = $message->id;
         $this->sender_id = $message->user_id;
         $this->receiver_id = $message->receiver_id;
-        $this->content = $message->content;
-        $this->created_at = $message->created_at->format('H:i d/m/Y');
     }
 
     /**
-     * 🔸 Phát tới cả 2 kênh (người gửi & người nhận)
+     * 🔸 Phát tới cả kênh của người gửi và người nhận
      */
     public function broadcastOn()
     {
@@ -46,20 +42,16 @@ class MessageSent implements ShouldBroadcastNow
      */
     public function broadcastAs()
     {
-        return 'MessageSent';
+        return 'MessageRecalled';
     }
 
     /**
-     * Dữ liệu gửi đi qua Pusher
+     * Dữ liệu gửi đi qua Pusher / Laravel Echo
      */
     public function broadcastWith()
     {
         return [
             'id' => $this->id,
-            'sender_id' => $this->sender_id,
-            'receiver_id' => $this->receiver_id,
-            'content' => $this->content,
-            'created_at' => $this->created_at,
         ];
     }
 }

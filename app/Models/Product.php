@@ -11,71 +11,65 @@ use App\Models\Category;
 use App\Models\ProductVariant;
 use App\Models\Wishlist;
 use App\Models\FlashSale;
-
+use App\Models\UserActivity; // 👈 cần để tính lượt xem
 
 class Product extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-    'category_id',
-    'name',
-    'slug',
-    'price',
-    'description',
-    'sku',
-    'brand',
-    'material',
-    'gender',
-    'care_instructions',
-    'youtube_id',
+        'category_id',
+        'name',
+        'slug',
+        'price',
+        'description',
+        'sku',
+        'brand',
+        'material',
+        'gender',
+        'care_instructions',
+        'youtube_id',
     ];
 
-    // Tự động thêm average_rating vào JSON/array khi serialize
-    protected $appends = ['average_rating','flash_sale_price', 'has_flash_sale'];
+    // Thêm các thuộc tính động (hiển thị tự động khi gọi $product->toArray())
+    protected $appends = [
+        'average_rating',
+        'flash_sale_price',
+        'has_flash_sale',
+        'view_count',
+        'wishlist_count',
+        'purchase_count',
+    ];
 
-    /**
-     * Sản phẩm thuộc về danh mục
-     */
+    // ==================== QUAN HỆ ====================
+
     public function category()
     {
         return $this->belongsTo(Category::class);
     }
 
-    /**
-     * Sản phẩm có nhiều biến thể (size)
-     */
     public function variants()
     {
         return $this->hasMany(ProductVariant::class);
     }
 
-    /**
-     * Sản phẩm có nhiều ảnh
-     */
     public function images()
     {
         return $this->hasMany(ProductImage::class);
     }
 
-    /**
-     * Sản phẩm có nhiều order items thông qua variants
-     */
     public function orderItems()
     {
         return $this->hasManyThrough(
             OrderItem::class,
             ProductVariant::class,
-            'product_id',          // FK trên product_variants
-            'product_variant_id',  // FK trên order_items
-            'id',                  // PK trên products
-            'id'                   // PK trên product_variants
+            'product_id',
+            'product_variant_id',
+            'id',
+            'id'
         );
     }
 
-    /**
-     * Sản phẩm có nhiều đánh giá
-     */
     public function reviews(): HasMany
     {
         return $this->hasMany(Review::class);
@@ -86,81 +80,97 @@ class Product extends Model
         return $this->hasMany(Wishlist::class);
     }
 
-    /**
-     * Lấy điểm trung bình của tất cả review, làm tròn 1 chữ số
-     */
+    // ==================== THUỘC TÍNH TÍNH TOÁN ====================
+
+    /** ⭐ Điểm trung bình đánh giá */
     public function getAverageRatingAttribute(): float
     {
         $avg = $this->reviews()->avg('rating') ?: 0;
         return round($avg, 1);
     }
 
+    /** 🖼 Ảnh chính của sản phẩm */
     public function getPrimaryImageAttribute()
-{
-    $image = $this->images->first();
-    return $image ? asset('storage/' . $image->path) : asset('images/default.jpg');
-}
-
-/**
-     * Lấy giá flash sale nếu đang trong thời gian áp dụng
-     */
-    public function getFlashSalePriceAttribute()
-{
-    $now = now();
-    $flashSales = FlashSale::where('start_time', '<=', $now)
-        ->where('end_time', '>=', $now)
-        ->get();
-
-    foreach ($flashSales as $flashSale) {
-        // Áp dụng cho tất cả sản phẩm
-        if ($flashSale->applies_to === 'all') {
-            return $this->applyFlashSaleDiscount($flashSale);
-        }
-
-        // Áp dụng theo danh mục
-        if ($flashSale->applies_to === 'category' && $flashSale->category_id === $this->category_id) {
-            return $this->applyFlashSaleDiscount($flashSale);
-        }
-
-        // Áp dụng theo sản phẩm
-        if ($flashSale->applies_to === 'product' && $flashSale->product_id === $this->id) {
-            return $this->applyFlashSaleDiscount($flashSale);
-        }
+    {
+        $image = $this->images->first();
+        return $image ? asset('storage/' . $image->path) : asset('images/default.jpg');
     }
 
-    return null; // Không có flash sale áp dụng
-}
+    /** ⚡ Giá Flash Sale */
+    public function getFlashSalePriceAttribute()
+    {
+        $now = now();
+        $flashSales = FlashSale::where('start_time', '<=', $now)
+            ->where('end_time', '>=', $now)
+            ->get();
 
+        foreach ($flashSales as $flashSale) {
+            if ($flashSale->applies_to === 'all') {
+                return $this->applyFlashSaleDiscount($flashSale);
+            }
+            if ($flashSale->applies_to === 'category' && $flashSale->category_id === $this->category_id) {
+                return $this->applyFlashSaleDiscount($flashSale);
+            }
+            if ($flashSale->applies_to === 'product' && $flashSale->product_id === $this->id) {
+                return $this->applyFlashSaleDiscount($flashSale);
+            }
+        }
 
-    /**
-     * Kiểm tra sản phẩm có đang trong Flash Sale hay không
-     */
+        return null;
+    }
+
+    /** ✅ Có đang trong Flash Sale không */
     public function getHasFlashSaleAttribute(): bool
     {
         return $this->flash_sale_price !== null;
     }
 
     protected function applyFlashSaleDiscount($flashSale)
-{
+    {
+        if (!$this->price) return null;
 
-    if (!$this->price) return null;
+        if ($flashSale->discount_percent) {
+            return round($this->price * (1 - $flashSale->discount_percent / 100));
+        }
 
-    if ($flashSale->discount_percent) {
-        return round($this->price * (1 - $flashSale->discount_percent / 100));
+        if ($flashSale->discount_amount) {
+            return max($this->price - $flashSale->discount_amount, 0);
+        }
+
+        return null;
     }
 
-    if ($flashSale->discount_amount) {
-        return max($this->price - $flashSale->discount_amount, 0);
+    /** 🆕 Kiểm tra sản phẩm mới trong 7 ngày */
+    public function isNew(): bool
+    {
+        return $this->created_at >= now()->subDays(7);
     }
 
+    // ==================== 🎯 THỐNG KÊ TRENDING ====================
 
-    return null;
-}
+    /** 👀 Đếm lượt xem trong 7 ngày gần nhất */
+    public function getViewCountAttribute()
+    {
+        return UserActivity::where('product_id', $this->id)
+            ->where('action', 'view')
+            ->where('created_at', '>=', now()->subDays(7))
+            ->count();
+    }
 
-public function isNew(): bool
-{
-    return $this->created_at >= now()->subDays(7);
-}
+    /** ❤️ Đếm số người thêm vào wishlist */
+    public function getWishlistCountAttribute()
+    {
+        return $this->wishlists()->count();
+    }
 
-
+    /** 🛒 Đếm số lượt mua trong 7 ngày gần nhất */
+    public function getPurchaseCountAttribute()
+    {
+        return $this->orderItems()
+            ->whereHas('order', function ($q) {
+                $q->where('status', 'completed')
+                  ->where('created_at', '>=', now()->subDays(7));
+            })
+            ->count();
+    }
 }

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Cache;
 use App\Mail\OrderPlacedMail;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\ProductVariant;
 use App\Models\ShippingFee;
 use App\Models\User;
+use App\Models\UserActivity; // ✅ thêm dòng này
 use App\Notifications\NewOrderNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -29,7 +31,11 @@ class CheckoutController extends Controller
         }
 
         $total = collect($cart)->sum(fn($i) => $i['price'] * $i['quantity']);
-        $provinces = ShippingFee::pluck('province')->unique()->toArray();
+
+        // ✅ Cache danh sách tỉnh 1 giờ (3600 giây)
+        $provinces = Cache::remember('shipping_provinces', 3600, function () {
+            return ShippingFee::pluck('province')->unique()->toArray();
+        });
 
         return view('front.checkout.index', compact('cart', 'total', 'provinces'));
     }
@@ -44,7 +50,6 @@ class CheckoutController extends Controller
             'phone'          => 'required|string|max:20',
             'email'          => 'required|email',
             'address'        => 'required|string|max:500',
-            // vẫn nhận province để tính phí ship/hiển thị, nhưng KHÔNG lưu vào orders
             'province'       => 'required|string|max:100',
             'shipping_fee'   => 'required|integer|min:0',
             'payment_method' => 'required|in:cod,bank,momo',
@@ -57,20 +62,22 @@ class CheckoutController extends Controller
 
         $order = $this->createOrder($request, $cart);
 
+        // 🧹 Xóa giỏ hàng sau khi đặt xong
         session()->forget('cart');
 
-        // Gửi mail xác nhận (queue)
+        // 📧 Gửi mail xác nhận (queue)
         Mail::to($request->email)->queue(new OrderPlacedMail($order));
 
-        // Gửi thông báo admin (queue)
-        $adminUsers = User::where('is_admin', true)->get();
+        // 🔔 Gửi thông báo admin (queue)
+        $adminUsers = User::where('is_admin', true)->limit(2)->get();
         Notification::send($adminUsers, new NewOrderNotification($order));
 
         return redirect()->route('checkout.thankyou', ['order' => $order->id]);
     }
 
     /**
-     * Tạo đơn hàng trong transaction và cập nhật kho (có KHÓA).
+     * 🧾 Tạo đơn hàng trong transaction và cập nhật kho (có KHÓA)
+     * Đồng thời ghi lại hành động "purchase" để hệ thống học hành vi.
      */
     protected function createOrder(Request $request, array $cart)
     {
@@ -79,7 +86,7 @@ class CheckoutController extends Controller
             $shippingFee  = (int) $request->shipping_fee;
             $totalAmount  = $productTotal + $shippingFee;
 
-            // LƯU Ý: bảng orders không có cột province -> không set 'province'
+            // 🧾 Tạo đơn hàng
             $order = Order::create([
                 'user_id'        => Auth::id(),
                 'name'           => $request->name,
@@ -96,9 +103,11 @@ class CheckoutController extends Controller
 
             $variantIds = array_keys($cart);
 
-            // KHÓA tồn kho để tránh đặt trùng lúc cao điểm
+            // 🔒 Khóa tồn kho để tránh đặt trùng
             $variants = ProductVariant::whereIn('id', $variantIds)
-                        ->lockForUpdate()->get()->keyBy('id');
+                ->lockForUpdate()
+                ->get()
+                ->keyBy('id');
 
             foreach ($cart as $variantId => $item) {
                 $qty     = (int) $item['quantity'];
@@ -108,9 +117,10 @@ class CheckoutController extends Controller
                     throw new \Exception("Sản phẩm {$item['name']} (size {$item['variant']}) không đủ tồn.");
                 }
 
-                // trừ kho an toàn (đang bị khóa)
+                // 📦 Trừ kho an toàn
                 $variant->decrement('stock', $qty);
 
+                // 🧾 Lưu từng sản phẩm trong đơn hàng
                 OrderItem::create([
                     'order_id'           => $order->id,
                     'product_id'         => $item['product_id'],
@@ -119,6 +129,13 @@ class CheckoutController extends Controller
                     'price'              => $item['price'],
                     'quantity'           => $qty,
                     'subtotal'           => $item['price'] * $qty,
+                ]);
+
+                // ✅ Ghi lại hành động "purchase" để hệ thống học hành vi mua hàng
+                UserActivity::create([
+                    'user_id'    => Auth::id(),
+                    'product_id' => $item['product_id'],
+                    'action'     => 'purchase',
                 ]);
             }
 

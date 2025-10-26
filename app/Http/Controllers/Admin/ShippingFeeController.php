@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ShippingFee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache; // ✅ Thêm dòng này
 
 class ShippingFeeController extends Controller
 {
@@ -12,22 +13,21 @@ class ShippingFeeController extends Controller
      * Hiển thị danh sách phí vận chuyển.
      */
     public function index(Request $request)
-{
-    // Lấy danh sách tỉnh/thành để đổ vào select box
-    $provinces = ShippingFee::select('province')->distinct()->orderBy('province')->pluck('province');
+    {
+        // Lấy danh sách tỉnh/thành để đổ vào select box
+        $provinces = ShippingFee::select('province')->distinct()->orderBy('province')->pluck('province');
 
-    // Xử lý lọc nếu có truyền province
-    $query = ShippingFee::query();
+        // Xử lý lọc nếu có truyền province
+        $query = ShippingFee::query();
 
-    if ($request->filled('province')) {
-        $query->where('province', $request->province);
+        if ($request->filled('province')) {
+            $query->where('province', $request->province);
+        }
+
+        $shippingFees = $query->orderBy('province')->paginate(10)->withQueryString();
+
+        return view('admin.shipping_fees.index', compact('shippingFees', 'provinces'));
     }
-
-    $shippingFees = $query->orderBy('province')->paginate(10)->withQueryString();
-
-    return view('admin.shipping_fees.index', compact('shippingFees', 'provinces'));
-}
-
 
     /**
      * Hiển thị form tạo mới.
@@ -48,6 +48,9 @@ class ShippingFeeController extends Controller
         ]);
 
         ShippingFee::create($request->only('province', 'fee'));
+
+        // ✅ Xóa cache khi thêm mới
+        Cache::forget('shipping_provinces');
 
         return redirect()->route('admin.shipping_fees.index')
             ->with('success', 'Thêm phí vận chuyển thành công!');
@@ -73,6 +76,9 @@ class ShippingFeeController extends Controller
 
         $shippingFee->update($request->only('province', 'fee'));
 
+        // ✅ Xóa cache khi cập nhật
+        Cache::forget('shipping_provinces');
+
         return redirect()->route('admin.shipping_fees.index')
             ->with('success', 'Cập nhật phí vận chuyển thành công!');
     }
@@ -83,6 +89,9 @@ class ShippingFeeController extends Controller
     public function destroy(ShippingFee $shippingFee)
     {
         $shippingFee->delete();
+
+        // ✅ Xóa cache khi xóa
+        Cache::forget('shipping_provinces');
 
         return redirect()->route('admin.shipping_fees.index')
             ->with('success', 'Xoá phí vận chuyển thành công!');

@@ -636,6 +636,73 @@
         @endif
     </section>
 
+    {{-- Trending Products --}}
+@if(isset($trendingProducts) && $trendingProducts->count())
+<section class="container mb-5" data-aos="fade-up">
+    <h2 class="section-title">
+        🔥 SẢN PHẨM ĐANG HOT <span class="badge bg-warning text-dark">TRENDING</span>
+    </h2>
+
+    <div class="row g-4">
+        @foreach($trendingProducts as $product)
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card">
+                <a href="{{ route('products.show', $product->slug) }}" class="text-decoration-none">
+                    <div class="card-img-container position-relative">
+    {{-- 🏅 Huy chương Top Trending --}}
+    @if($loop->index == 0)
+        <span class="trending-medal medal-gold">🥇 Top 1</span>
+    @elseif($loop->index == 1)
+        <span class="trending-medal medal-silver">🥈 Top 2</span>
+    @elseif($loop->index == 2)
+        <span class="trending-medal medal-bronze">🥉 Top 3</span>
+    @endif
+
+    @if($img = $product->images->first())
+        <img src="{{ asset('storage/'.$img->path) }}" alt="{{ $product->name }}">
+    @else
+        <img src="{{ asset('images/default.jpg') }}" alt="{{ $product->name }}">
+    @endif
+</div>
+
+                    <div class="card-body">
+                        <button class="wishlist-btn" data-product-id="{{ $product->id }}">
+                            <i class="bi bi-heart"></i>
+                        </button>
+
+                        <h6 class="card-title">{{ $product->name }}</h6>
+
+                        <div class="price">
+                            {{ number_format($product->price) }}₫
+                        </div>
+
+                        {{-- 📊 Thống kê tương tác --}}
+                        <small class="text-muted d-block mb-2">
+                            👀 {{ $product->view_count ?? 0 }} lượt xem |
+                            🛒 {{ $product->purchase_count ?? 0 }} lượt mua |
+                            ❤️ {{ $product->wishlist_count ?? 0 }}
+                            💰 {{ $product->purchase_count ?? 0 }} mua |
+                            ⚡ {{ $product->score ?? 0 }} điểm hot
+                        </small>
+
+                        <a href="{{ route('products.show', $product->slug) }}" class="btn btn-outline-primary btn-detail">
+                            Xem chi tiết
+                        </a>
+                    </div>
+                </a>
+            </div>
+        </div>
+        @endforeach
+    </div>
+</section>
+@endif
+<div class="text-center mt-4">
+    <a href="{{ route('products.trending') }}" class="btn btn-primary view-all-btn">
+        🔗 Xem bảng xếp hạng đầy đủ <i class="bi bi-fire ms-2"></i>
+    </a>
+</div>
+
+
     {{-- Flash Sale --}}
     @if($flashSale && $flashSale->isActive() && $flashSaleProducts->count())
     <section class="container mb-5">

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Front;
 use App\Http\Controllers\Controller;
 use App\Models\ProductVariant;
 use App\Models\Coupon;
+use App\Models\UserActivity; // ✅ Thêm dòng này
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 
@@ -32,7 +33,7 @@ class CartController extends Controller
 
         // ✅ Lấy tất cả coupon thường (admin tạo, KHÔNG phải cho vòng quay)
         $activeCoupons = Coupon::where('is_active', 1)
-            ->where('is_spin_prize', 0) // chỉ lấy coupon thường
+            ->where('is_spin_prize', 0)
             ->where(function ($query) {
                 $query->whereNull('expires_at')
                       ->orWhere('expires_at', '>', Carbon::now());
@@ -87,7 +88,16 @@ class CartController extends Controller
             ];
         }
 
+        // ✅ Ghi lại hành động "add_to_cart" để hệ thống học hành vi người dùng
+        UserActivity::create([
+            'user_id'    => auth()->id(),
+            'product_id' => $variant->product->id,
+            'action'     => 'add_to_cart',
+        ]);
+
+        // ✅ Session cập nhật
         session(['cart' => $cart]);
+
         return back()->with('success', 'Đã thêm vào giỏ hàng.');
     }
 
@@ -159,6 +169,13 @@ class CartController extends Controller
 
         // Mua ngay: thay thế giỏ chỉ còn 1 item
         session(['cart' => [$rowId => $item]]);
+
+        // ✅ Ghi lại hành động "add_to_cart" (vì bản chất vẫn thêm sản phẩm vào giỏ)
+        UserActivity::create([
+            'user_id'    => auth()->id(),
+            'product_id' => $product->id,
+            'action'     => 'add_to_cart',
+        ]);
 
         return redirect()->route(auth()->check() ? 'checkout.index' : 'orders.quick');
     }

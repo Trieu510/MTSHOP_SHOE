@@ -6,21 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Models\Product;
 use App\Models\Category;
-use App\Models\Post;
 use App\Models\FlashSale;
 use Illuminate\Http\Request;
+use App\Services\TrendingService; // 👈 Thêm dòng này
 
 class HomeController extends Controller
 {
     /**
-     * Display the home page with banners and products.
+     * Hiển thị trang chủ với banner, flash sale, thương hiệu, sản phẩm mới & trending
      */
     public function index(Request $request)
     {
-        // Lấy banner theo độ ưu tiên
+        // 🖼️ Lấy banner theo độ ưu tiên
         $banners = Banner::orderBy('priority', 'desc')->get();
 
-        // Xây dựng query sản phẩm
+        // 🧩 Xây dựng query sản phẩm (mới nhất)
         $query = Product::with('images');
 
         // Tìm kiếm theo tên
@@ -48,33 +48,40 @@ class HomeController extends Controller
                 $query->orderBy('created_at', 'desc');
         }
 
-        // Phân trang 12 sản phẩm
+        // 📦 Phân trang 12 sản phẩm
         $products = $query->paginate(12)->appends($request->query());
 
-        // Lấy danh mục thương hiệu nổi bật
+        // 🏷️ Lấy danh mục thương hiệu nổi bật
         $featuredBrands = Category::whereIn('slug', ['nike', 'adidas', 'vans', 'puma', 'mlb', 'newbalance'])->get();
 
-        // Lấy flash sale đang hoạt động
+        // ⚡ Lấy Flash Sale đang hoạt động
         $flashSale = FlashSale::where('start_time', '<=', now())
             ->where('end_time', '>=', now())
             ->latest()
             ->first();
 
-        // Lấy danh sách sản phẩm đang trong flash sale
+        // ⚡ Danh sách sản phẩm Flash Sale
         $flashSaleProducts = collect();
         if ($flashSale) {
             $flashSaleProducts = Product::with('images')
                 ->get()
                 ->filter(fn ($product) => $product->has_flash_sale)
-                ->take(8); // lấy tối đa 8 sản phẩm
+                ->take(8);
         }
 
+        // 🔥 Lấy danh sách sản phẩm đang hot (Trending)
+        $trendingProducts = cache()->remember('trending_products', now()->addHours(6), function () {
+            return (new TrendingService())->getTrendingProducts(8);
+        });
+
+        // 🏁 Trả dữ liệu về view
         return view('front.home', compact(
             'banners',
             'products',
             'featuredBrands',
             'flashSale',
-            'flashSaleProducts'
+            'flashSaleProducts',
+            'trendingProducts' // 👈 Thêm biến này
         ));
     }
 }

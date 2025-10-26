@@ -43,6 +43,8 @@ use App\Http\Controllers\Front\ChatController;
 use App\Http\Controllers\Api\ShippingFeeApiController;
 use App\Http\Controllers\Auth\LoginController;
 use Illuminate\Notifications\DatabaseNotification;
+use App\Services\TrendingService;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -61,6 +63,24 @@ Route::get('/post/{slug}', [PostController::class, 'show'])->name('posts.show');
 
 Route::get('/products',       [FrontProductController::class,  'index'])->name('products.index');
 Route::get('/products-autocomplete', [FrontProductController::class, 'autocomplete'])->name('products.autocomplete');
+// Trang “Tất cả sản phẩm đang hot”
+Route::get('/products/trending', function (\Illuminate\Http\Request $request) {
+    $filter = $request->get('filter', '7days'); // mặc định: 7 ngày
+
+    // Quy đổi filter thành số ngày
+    $days = match ($filter) {
+        '7days' => 7,
+        '30days' => 30,
+        'all' => 0,
+        default => 7,
+    };
+
+    $trendingService = new TrendingService();
+    $products = $trendingService->getTrendingProducts(1000, $days);
+
+    return view('front.products.trending', compact('products', 'filter'));
+})->name('products.trending');
+
 Route::get('/products/{slug}',[FrontProductController::class,  'show'])->name('products.show');
 
 Route::get('/contact',        [FrontContactController::class,  'create'])->name('contact.create');

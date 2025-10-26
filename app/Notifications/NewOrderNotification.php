@@ -3,11 +3,12 @@
 namespace App\Notifications;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue; // ✅ Thêm dòng này
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\Order;
 
-class NewOrderNotification extends Notification
+class NewOrderNotification extends Notification implements ShouldQueue // ✅ Thêm implements ShouldQueue
 {
     use Queueable;
 
@@ -22,11 +23,11 @@ class NewOrderNotification extends Notification
     }
 
     /**
-     * Kênh gửi thông báo (email).
+     * Kênh gửi thông báo (email + database).
      */
     public function via(object $notifiable): array
     {
-        return ['mail', 'database']; // ← thêm database
+        return ['mail', 'database']; // Gửi qua email & lưu DB
     }
 
     /**

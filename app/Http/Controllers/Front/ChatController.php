@@ -48,7 +48,7 @@ class ChatController extends Controller
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
-        // ✅ Đếm số lượng tin chưa đọc (phục vụ chấm đỏ ngoài giao diện)
+        // ✅ Đếm số lượng tin chưa đọc
         $unreadCount = Message::where('receiver_id', $userId)
             ->where('is_read', false)
             ->count();
@@ -125,9 +125,13 @@ class ChatController extends Controller
             'is_read'     => false,
         ]);
 
+        // 🟢 Nạp sẵn dữ liệu tin được trả lời
+        $message->load('replyTo');
+
         // 🔔 Gửi realtime qua event (nếu có cấu hình)
         event(new MessageSent($message));
 
+        // 🟢 Trả về dữ liệu đầy đủ cho frontend
         return response()->json([
             'success' => true,
             'message' => [
@@ -138,7 +142,12 @@ class ChatController extends Controller
                 'type'        => $message->type,
                 'file_url'    => $message->file_path ? asset('storage/'.$message->file_path) : null,
                 'time'        => $message->created_at->format('H:i d/m/Y'),
-                'reply_to_id' => $message->reply_to_id
+                'reply_to_id' => $message->reply_to_id,
+                'reply_to'    => $message->replyTo ? [
+                    'id'      => $message->replyTo->id,
+                    'content' => $message->replyTo->content,
+                    'sender'  => $message->replyTo->user_id == Auth::id() ? 'Bạn' : 'SHOEZ',
+                ] : null,
             ]
         ]);
     }
@@ -195,11 +204,10 @@ class ChatController extends Controller
     }
 
     /**
-     * 📩 Đếm số tin nhắn chưa đọc (phục vụ hiển thị chấm đỏ)
+     * 📩 Đếm số tin nhắn chưa đọc
      */
     public function getUnreadCount()
     {
-        // Nếu chưa đăng nhập thì không có tin nhắn
         if (!Auth::check()) {
             return response()->json(['count' => 0]);
         }
@@ -212,8 +220,7 @@ class ChatController extends Controller
     }
 
     /**
-     * 🔔 API thông báo tin nhắn mới (polling)
-     * Kiểm tra xem có tin nhắn mới từ admin gửi đến hay không
+     * 🔔 Polling kiểm tra tin mới từ admin
      */
     public function checkNewMessages(Request $request)
     {
@@ -225,7 +232,6 @@ class ChatController extends Controller
             return response()->json(['new' => false]);
         }
 
-        // Tìm tin nhắn mới từ admin sau last_id
         $newMessages = Message::where('user_id', $admin->id)
             ->where('receiver_id', $userId)
             ->where('id', '>', $lastId)

@@ -28,6 +28,7 @@ class ChatAdminController extends Controller
 
     /**
      * 💬 Hiển thị toàn bộ cuộc trò chuyện giữa admin và khách hàng
+     * (Hỗ trợ AJAX polling để tự động tải tin nhắn mới)
      */
     public function show(Request $request, $userId)
     {
@@ -38,6 +39,7 @@ class ChatAdminController extends Controller
             return redirect()->route('admin.chat.index')->with('error', 'Không tìm thấy khách hàng.');
         }
 
+        // Truy vấn cơ bản cho cả load lần đầu và AJAX
         $query = Message::visibleFor($adminId)
             ->where(function ($q) use ($userId, $adminId) {
                 $q->where('user_id', $userId)
@@ -48,13 +50,16 @@ class ChatAdminController extends Controller
                   ->where('receiver_id', $userId);
             });
 
-        // Polling (AJAX)
+        // ===============================
+        // 🔄 Polling (AJAX): chỉ trả về tin nhắn mới hơn last_id
+        // ===============================
         if ($request->ajax()) {
-            if ($request->filled('after')) {
-                $query->where('id', '>', (int) $request->after);
-            }
+            $lastId = (int) $request->get('last_id', 0);
 
-            $messages = $query->with('replyTo')->orderBy('created_at')->get();
+            $messages = $query->where('id', '>', $lastId)
+                ->with('replyTo')
+                ->orderBy('created_at', 'asc')
+                ->get();
 
             return response()->json([
                 'success' => true,
@@ -62,10 +67,12 @@ class ChatAdminController extends Controller
             ]);
         }
 
-        // Lấy toàn bộ khi load lần đầu
+        // ===============================
+        // 🧭 Lần đầu load trang
+        // ===============================
         $messages = $query->with('replyTo')->orderBy('created_at')->get();
 
-        // Đánh dấu đã đọc tất cả tin từ user -> admin
+        // ✅ Đánh dấu đã đọc tất cả tin nhắn từ user → admin
         Message::where('user_id', $userId)
             ->where('receiver_id', $adminId)
             ->where('is_read', false)

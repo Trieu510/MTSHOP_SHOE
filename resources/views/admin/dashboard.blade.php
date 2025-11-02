@@ -299,6 +299,17 @@
         .top-products-card .table td {
             padding: 0.75rem 1rem;
         }
+        .table td, .table th {
+    color: #e2e8f0;
+}
+.table tbody tr:hover {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+}
+.text-warning { color: #fbbf24 !important; }
+.text-white a:hover {
+    color: #a5b4fc !important;
+}
+
     }
 </style>
 @endpush
@@ -388,51 +399,96 @@
 </div>
 
 
-    <!-- Top Products Table -->
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card top-products-card">
-                <div class="card-header">
-                    <h5 class="card-title">Top 5 sản phẩm bán chạy</h5>
-                    <a href="{{ route('admin.products.index') }}" class="view-all">
-                        Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table align-middle mb-0">
-                            <thead>
-                                <tr>
-                                    <th scope="col">STT</th>
-                                    <th scope="col">Sản phẩm</th>
-                                    <th scope="col">Số lượng bán</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($topProducts as $index => $product)
-                                <tr>
-                                    <th scope="row">
-                                        <div class="product-rank top-{{ $index + 1 }}">
-                                            {{ $index + 1 }}
-                                        </div>
-                                    </th>
-                                    <td>{{ $product->name }}</td>
-                                    <td>{{ number_format($product->total_sold) }}</td>
-                                </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+<!-- 🏆 Top bán chạy + 🔥 Top hot -->
+<div class="row mt-4 g-4">
+    <!-- 🏆 Top sản phẩm bán chạy -->
+    <div class="col-lg-6">
+        <div class="card top-products-card h-100">
+            <div class="card-header">
+                <h5 class="card-title">🏆 Top 5 sản phẩm bán chạy</h5>
+                <a href="{{ route('admin.products.index') }}" class="view-all">
+                    Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Sản phẩm</th>
+                                <th>Số lượng bán</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($topProducts as $index => $product)
+                            <tr>
+                                <td><div class="product-rank top-{{ $index + 1 }}">{{ $index + 1 }}</div></td>
+                                <td>{{ $product->name }}</td>
+                                <td class="fw-bold text-primary">{{ number_format($product->total_sold) }}</td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Recent Orders Table -->
+
+    <!-- 🔥 Top sản phẩm hot -->
+    <div class="col-lg-6">
+        <div class="card top-products-card h-100">
+            <div class="card-header">
+                <h5 class="card-title">🔥 Top sản phẩm hot (7 ngày gần nhất)</h5>
+                <a href="{{ route('products.trending') }}" target="_blank" class="view-all">
+                    Xem chi tiết <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Sản phẩm</th>
+                                <th>👀</th>
+                                <th>❤️</th>
+                                <th>🛒</th>
+                                <th>🔥</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($trendingProducts as $index => $product)
+                            <tr>
+                                <td><div class="product-rank top-{{ $index + 1 }}">{{ $index + 1 }}</div></td>
+                                <td>
+                                    <a href="{{ route('products.show', $product->slug) }}" target="_blank"
+                                       class="text-decoration-none fw-semibold text-white"  >
+                                       {{ $product->name }}
+                                    </a>
+                                </td>
+                                <td>{{ $product->view_count ?? 0 }}</td>
+                                <td>{{ $product->wishlist_count ?? 0 }}</td>
+                                <td>{{ $product->purchase_count ?? 0 }}</td>
+                                <td class="fw-bold text-warning">{{ $product->score ?? 0 }}</td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="6" class="text-center text-muted py-3">Chưa có dữ liệu xu hướng</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 🧾 Đơn hàng gần nhất -->
 <div class="row mt-4">
     <div class="col-12">
         <div class="card top-products-card">
             <div class="card-header">
-                <h5 class="card-title">Đơn hàng gần nhất</h5>
+                <h5 class="card-title">🧾 Đơn hàng gần nhất</h5>
                 <a href="{{ route('admin.orders.index') }}" class="view-all">
                     Xem tất cả <i class="bi bi-arrow-right ms-1"></i>
                 </a>
@@ -456,9 +512,7 @@
                                 <td>{{ $order->user->name ?? $order->name }}</td>
                                 <td>{{ $order->created_at->format('d/m/Y H:i') }}</td>
                                 <td>{{ number_format($order->total_amount, 0) }}₫</td>
-                                <td>
-                                    <span class="badge bg-secondary">{{ ucfirst($order->status) }}</span>
-                                </td>
+                                <td><span class="badge bg-secondary">{{ ucfirst($order->status) }}</span></td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -469,5 +523,4 @@
     </div>
 </div>
 
-</div>
 @endsection
